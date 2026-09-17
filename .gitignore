@@ -67,3 +67,12 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# project
+build/
+install/
+src/isa/riscv-isa-sim/
+src/isa/spike_build.status
+__pycache__/
+*.elf
+!/Makefile
