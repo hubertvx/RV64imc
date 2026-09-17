@@ -76,3 +76,4 @@ src/isa/spike_build.status
 __pycache__/
 *.elf
 !/Makefile
+models/
