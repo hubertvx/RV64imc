@@ -16,7 +16,12 @@ SPIKE   ?= $(RISCV)/bin/spike
 ISA     ?= rv64imc_zicsr
 CONFIG  ?= b0
 GEN     := build/gen
-ELF     := build/bench_layer_$(CONFIG).elf
+# SAMPLE=1 builds the variant that runs only the first NUM_SAMPLE_VECTORS layers (for instruction tracing)
+ifeq ($(SAMPLE),1)
+SUFFIX  := _sample
+EXTRA_CFLAGS += -DSAMPLE_ONLY
+endif
+ELF     := build/bench_layer_$(CONFIG)$(SUFFIX).elf
 
 CFLAGS  := -O2 -march=$(ISA) -mabi=lp64 -mcmodel=medany -ffreestanding -fno-builtin \
            -fno-tree-loop-distribute-patterns -nostdlib -nostartfiles -Wall -Wextra \
