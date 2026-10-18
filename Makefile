@@ -4,6 +4,8 @@
 #   make CONFIG=b0 run       build and run the layer benchmark for one kernel configuration
 #   make CONFIG=b0 test      same, but only print PASS/FAIL (exit code 0 = outputs match numpy)
 #   make nofp                check that the ELF contains no floating-point instructions
+#   make qext                build the qmac8 Spike extension (build/libqmac8.so)
+#   make qtest               run tests/test_isa_qmac8.c on Spike with the qmac8 extension (534,309 checks)
 #   make smoke               build and run tests/smoke_runtime.c (runtime only, no model data)
 #   make ktest               compile and run the kernel unit test on the PC (tests/test_kernels_host.c)
 
@@ -12,6 +14,9 @@ PREFIX  ?= $(RISCV)/bin/riscv64-unknown-elf-
 CC       = $(PREFIX)gcc
 OBJDUMP  = $(PREFIX)objdump
 SPIKE   ?= $(RISCV)/bin/spike
+# Spike with the custom instruction: our own build plus the qmac8 extension library
+SPIKE_X ?= install/bin/spike
+QEXT    := --extlib=build/libqmac8.so --extension=qmac8
 
 ISA     ?= rv64imc_zicsr
 CONFIG  ?= b0
@@ -31,7 +36,7 @@ LDFLAGS := -T src/runtime/linker.ld -Wl,--no-warn-rwx-segments
 SRCS    := src/runtime/startup.S src/runtime/runtime.c src/runtime/model_data.S \
            src/bench/bench_layer.c src/kernels/gemm_$(CONFIG).c src/kernels/requant.c
 
-.PHONY: all gen run test smoke ktest nofp clean
+.PHONY: all gen run test smoke ktest qext qtest nofp clean
 all: $(ELF)
 
 gen: $(GEN)/weights.bin
@@ -52,6 +57,20 @@ ktest:
 	@mkdir -p build
 	gcc -O2 -Wall -Wextra -Isrc/kernels -o build/ktest tests/test_kernels_host.c src/kernels/gemm_b0.c src/kernels/requant.c
 	build/ktest
+
+build/libqmac8.so: src/isa/qmac8/qmac8.cc src/isa/qmac8/build_ext.mk
+	$(MAKE) -f src/isa/qmac8/build_ext.mk
+
+qext: build/libqmac8.so
+
+# qmac8 is an illegal instruction on Spike
+# --foreground: without it, timeout started by make's non-interactive shell runs in a background process group
+# and the terminal STOPS it after the test done, so make qtest never returns.
+QTEST := build/test_isa_qmac8.elf
+qtest: qext
+	@mkdir -p build
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $(QTEST) src/runtime/startup.S src/runtime/runtime.c tests/test_isa_qmac8.c
+	timeout --foreground 20 $(SPIKE_X) $(QEXT) --isa=$(ISA) $(QTEST)
 
 SMOKE := build/smoke_runtime.elf
 smoke:
