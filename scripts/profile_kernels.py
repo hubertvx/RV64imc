@@ -2,6 +2,10 @@
 """
 Profile one kernel configuration on Spike and write results
 
+  python scripts/profile_kernels.py --config b0|x1
+  b0 runs on stock Spike. Every other configuration uses the qmac8 instruction and runs on Spike build
+  with the extension library loaded (install/bin/spike --extlib=build/libqmac8.so --extension=qmac8).
+
   Counts: the benchmark runs ALL 50 weight layers of deit-tiny (about 86% of the model's MACs). Retired instructions come from the counter the program reads itself (exact), per layer and per operator.
   Mix: tracing every instruction (spike -l) is about 500x slower than a plain run, so the load / store, multiply, branch, custom, ALU mix is traced on a 2-layer sample. Every layer runs the same kernel loop, so the mix per MAC is the same for all layers. The sample's counters are checked to equal the full run's counters for those layers
   Code size: kernel functions and the whole .text of the program
@@ -28,8 +32,8 @@ def run(cmd, **kw):
 
 
 def run_program(spike, isa, elf):
-    """Run the benchmark on Spike; return one dict per layer ('== name' section of the output)."""
-    res = run([spike, f"--isa={isa}", elf], capture_output=True)
+    """Run the benchmark on Spike (spike = command as a list); return one dict per layer ('== name' section)."""
+    res = run(spike + [f"--isa={isa}", elf], capture_output=True)
     vecs = []
     for line in res.stdout.splitlines():
         if line.startswith("== "):
@@ -71,7 +75,7 @@ def trace_mix(spike, isa, elf, ranges):
     exe = os.path.join(ROOT, "build", "mixcount")
     run(["gcc", "-O2", "-o", exe, "tools/instr_mix.c"], check=True)
     args = [f"{k}@{i}={lo:x}-{hi:x}" for k, rs in ranges.items() for i, (lo, hi) in enumerate(rs)]
-    sp = subprocess.Popen([spike, "-l", f"--isa={isa}", elf], cwd=ROOT, stdout=subprocess.DEVNULL,
+    sp = subprocess.Popen(spike + ["-l", f"--isa={isa}", elf], cwd=ROOT, stdout=subprocess.DEVNULL,
                           stderr=subprocess.PIPE)
     mc = subprocess.run([exe] + args, stdin=sp.stderr, capture_output=True, text=True, check=True)
     sp.wait()
@@ -100,12 +104,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="b0")
     ap.add_argument("--no-mix", action="store_true", help="skip the slow instruction trace")
-    ap.add_argument("--spike", default="/opt/riscv/bin/spike")
+    ap.add_argument("--spike", help="spike command to use instead of the default for the configuration")
     ap.add_argument("--isa", default="rv64imc_zicsr")
     args = ap.parse_args()
     cfg = args.config
 
-    spike = args.spike
+    if args.spike:
+        spike = args.spike.split()
+    elif cfg == "b0":
+        spike = ["/opt/riscv/bin/spike"]                       # baseline: stock Spike
+    else:                                                        # custom instruction: Spike + qmac8 extension
+        run(["make", "-s", "build/libqmac8.so"], check=True)
+        spike = ["install/bin/spike", "--extlib=build/libqmac8.so", "--extension=qmac8"]
 
     elf = f"build/bench_layer_{cfg}.elf"
     run(["make", "-s", f"CONFIG={cfg}", elf], check=True)
@@ -122,7 +132,7 @@ def main():
 
     mix = None
     if not args.no_mix:
-        print("tracing the instruction mix on the 2-layer sample with spike -l (about 8 minutes) ...", flush=True)
+        print("tracing the instruction mix on the 2-layer sample with spike -l ...", flush=True)
         sample_elf = f"build/bench_layer_{cfg}_sample.elf"
         run(["make", "-s", f"CONFIG={cfg}", "SAMPLE=1", sample_elf], check=True)
         svecs = run_program(spike, args.isa, sample_elf)
