@@ -12,10 +12,17 @@
 #   make ktest               compile and run the kernel unit test on the PC (tests/test_kernels_host.c)
 
 RISCV   ?= /opt/riscv
-PREFIX  ?= $(RISCV)/bin/riscv64-unknown-elf-
+# The RISC-V compiler and binutils: in $(RISCV)/bin if a toolchain is installed there (the CV-Wally layout),
+# otherwise whatever is on PATH (apt, Homebrew, one you built yourself). A different name prefix can be given,
+# e.g.  make PREFIX=riscv64-elf-
+TOOLDIR := $(if $(wildcard $(RISCV)/bin/riscv64-unknown-elf-gcc),$(RISCV)/bin/,)
+PREFIX  ?= $(TOOLDIR)riscv64-unknown-elf-
 CC       = $(PREFIX)gcc
 OBJDUMP  = $(PREFIX)objdump
-SPIKE   ?= $(RISCV)/bin/spike
+# Spike without the extension (used for b0): $(RISCV)/bin/spike if present, else our own build, else spike on PATH
+SPIKE   ?= $(firstword $(wildcard $(RISCV)/bin/spike install/bin/spike) spike)
+# GNU timeout: "timeout" on Linux, "gtimeout" on macOS (brew install coreutils); without it the tests run unguarded
+TIMEOUT := $(shell command -v timeout || command -v gtimeout)
 # Spike with the custom instruction: our own build plus the qmac8 extension library
 SPIKE_X ?= install/bin/spike
 QEXT    := --extlib=build/libqmac8.so --extension=qmac8
@@ -78,7 +85,7 @@ QTEST := build/test_isa_qmac8.elf
 qtest: qext
 	@mkdir -p build
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(QTEST) src/runtime/startup.S src/runtime/runtime.c tests/test_isa_qmac8.c
-	timeout --foreground 60 $(SPIKE_X) $(QEXT) --isa=$(ISA) $(QTEST)
+	$(if $(TIMEOUT),$(TIMEOUT) --foreground 60) $(SPIKE_X) $(QEXT) --isa=$(ISA) $(QTEST)
 
 SMOKE := build/smoke_runtime.elf
 smoke:
@@ -87,7 +94,7 @@ smoke:
 	$(SPIKE) --isa=$(ISA) $(SMOKE)
 
 nofp: $(ELF)
-	@if $(OBJDUMP) -d $(ELF) | grep -E '\s(f(add|sub|mul|div|sqrt|lw|ld|sw|sd|cvt|mv|eq|lt|le|madd)\.|c\.f)'; then \
+	@if $(OBJDUMP) -d $(ELF) | grep -E '[[:space:]](f(add|sub|mul|div|sqrt|lw|ld|sw|sd|cvt|mv|eq|lt|le|madd)\.|c\.f)'; then \
 	    echo "FAIL: floating-point instruction found"; exit 1; \
 	else echo "OK: no floating-point instructions in $(ELF)"; fi
 
