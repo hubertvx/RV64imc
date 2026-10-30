@@ -1,0 +1,3 @@
+ai-edge-litert==2.3.0
+huggingface-hub==2.4.0
+pillow
