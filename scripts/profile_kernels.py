@@ -20,7 +20,22 @@ import subprocess
 import sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-PREFIX = "/opt/riscv/bin/riscv64-unknown-elf-"
+RISCV = os.environ.get("RISCV", "/opt/riscv")
+# RISC-V binutils (nm, size): in $RISCV/bin if a toolchain is installed there (the CV-Wally layout), else on PATH.
+# Set the environment variable PREFIX to use another name prefix, e.g. PREFIX=riscv64-elf-
+PREFIX = os.environ.get("PREFIX") or (
+    (os.path.join(RISCV, "bin") + "/" if os.path.exists(os.path.join(RISCV, "bin", "riscv64-unknown-elf-nm")) else "")
+    + "riscv64-unknown-elf-")
+
+
+def stock_spike():
+    """Spike without the extension, for b0: $RISCV/bin/spike if present, else our own build, else spike on PATH."""
+    for candidate in (os.path.join(RISCV, "bin", "spike"), os.path.join(ROOT, "install", "bin", "spike")):
+        if os.path.exists(candidate):
+            return candidate
+    return "spike"
+
+
 KERNELS = {                    # name -> symbols whose code belongs to it
     "gemm_s8": ["gemm_s8"],
     "requant": ["requant", "high_mul", "round_shift"],
@@ -112,7 +127,7 @@ def main():
     if args.spike:
         spike = args.spike.split()
     elif cfg == "b0":
-        spike = ["/opt/riscv/bin/spike"]                       # baseline: stock Spike
+        spike = [stock_spike()]                                # baseline: Spike without the extension
     else:                                                        # custom instruction: Spike + qmac8 extension
         run(["make", "-s", "build/libqmac8.so"], check=True)
         spike = ["install/bin/spike", "--extlib=build/libqmac8.so", "--extension=qmac8"]
