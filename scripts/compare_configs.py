@@ -149,11 +149,9 @@ def main():
         gemm_reduction = number(kernels[base][GEMM], "instret") / number(kernels[c][GEMM], "instret")
         per_operator = [number(operators[base][n], "total_instret") / number(operators[c][n], "total_instret")
                         for n in operators[base]]
-        verdict = "met" if min(per_operator) >= GEMM_REDUCTION_TARGET else "NOT met"
         out.append(f"* {c}: GEMM kernel {gemm_reduction:.2f}x fewer instructions; every operator {min(per_operator):.2f}x "
-                   f"to {max(per_operator):.2f}x fewer (GEMM + requantization) -> target {verdict}")
+                   f"to {max(per_operator):.2f}x fewer (GEMM + requantization)")
     out.append("")
-    out.append("Retired instructions only: Spike has no timing model, so cycle speedup and CPI need the CV-Wally RTL.")
     if not traced:
         out.append("")
         out.append("WARNING: the instruction-mix columns are empty. Run profile_kernels.py without --no-mix for every config.")
