@@ -45,7 +45,7 @@ The unchanged requantization might be the next bottleneck.
 # 1. system packages
 sudo apt update
 sudo apt install -y git make g++ rsync curl ca-certificates \
-    device-tree-compiler libboost-dev libboost-regex-dev \
+    device-tree-compiler libboost-dev libboost-regex-dev libboost-system-dev \
     gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
