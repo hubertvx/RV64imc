@@ -57,9 +57,13 @@ def run_program(spike, isa, elf):
             k, v = line.split(": ", 1)
             if v.strip().isdigit():
                 vecs[-1][k] = int(v)
-    verdict = res.stdout.strip().splitlines()[-1]
-    if res.returncode != 0:
-        sys.exit(f"{elf}: the program's own check failed ({verdict}): kernel output does not match numpy")
+    lines = res.stdout.strip().splitlines()
+    if res.returncode != 0 or not lines:
+        # either the program's own check failed (it printed FAIL), or Spike could not run it at all (no output)
+        verdict = lines[-1] if lines else "no output"
+        sys.exit(f"{elf}: the run failed ({verdict}), exit code {res.returncode}.\n"
+                 f"Spike said: {res.stderr.strip()[-400:] or '(nothing)'}\n"
+                 f"If the verdict is FAIL, a kernel output does not match the numpy reference.")
     return vecs
 
 
@@ -124,12 +128,13 @@ def main():
     args = ap.parse_args()
     cfg = args.config
 
+    if cfg != "b0":
+        run(["make", "-s", "build/libqmac8.so"], check=True)    # the X configurations need the extension library
     if args.spike:
         spike = args.spike.split()
     elif cfg == "b0":
         spike = [stock_spike()]                                # baseline: Spike without the extension
     else:                                                        # custom instruction: Spike + qmac8 extension
-        run(["make", "-s", "build/libqmac8.so"], check=True)
         spike = ["install/bin/spike", "--extlib=build/libqmac8.so", "--extension=qmac8"]
 
     elf = f"build/bench_layer_{cfg}.elf"
