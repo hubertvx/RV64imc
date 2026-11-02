@@ -61,10 +61,14 @@ uv pip install -r requirements.txt
 
 # 4. Spike, at the exact version this project was built with
 git clone https://github.com/riscv-software-src/riscv-isa-sim.git src/isa/riscv-isa-sim
+git -C src/isa/riscv-isa-sim checkout 5a760667bf0d0ab893173b9eeff9c109c8d7dd9a
 mkdir src/isa/riscv-isa-sim/build
 REPO=$PWD
 cd src/isa/riscv-isa-sim/build && ../configure --prefix="$REPO/install" && make -j"$(nproc)" && make install
+
+cd ../../../.. # back to main repo if currently at src/isa/riscv-isa-sim/build
 ```
+
 
 Step 4 must use that exact Spike commit: different versions might have a different layout and the build fails
 If already have the CV-Wally toolchain, put its tools on `PATH` (or set `RISCV=/opt/riscv`); the Makefile also
