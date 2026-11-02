@@ -63,7 +63,7 @@ uv pip install -r requirements.txt
 git clone https://github.com/riscv-software-src/riscv-isa-sim.git src/isa/riscv-isa-sim
 mkdir src/isa/riscv-isa-sim/build
 REPO=$PWD
-(cd src/isa/riscv-isa-sim/build && ../configure --prefix="$REPO/install" && make -j"$(nproc)" && make install)
+cd src/isa/riscv-isa-sim/build && ../configure --prefix="$REPO/install" && make -j"$(nproc)" && make install
 ```
 
 Step 4 must use that exact Spike commit: different versions might have a different layout and the build fails
