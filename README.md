@@ -74,6 +74,25 @@ Step 4 must use that exact Spike commit: different versions might have a differe
 If already have the CV-Wally toolchain ([cvw toolchain installation](https://github.com/openhwfoundation/cvw#toolchain-installation-and-configuration)), put its tools on `PATH` (or set `RISCV=/opt/riscv`); the Makefile also
 searches there.
 
+
+## Setup (macOS)
+Tested on Apple Silicon (arm64).
+```bash
+# 1. command line tools, then Homebrew packages
+xcode-select --install
+
+brew install uv
+
+brew trust riscv-software-src/riscv
+brew tap riscv-software-src/riscv
+brew install riscv-tools
+
+# 2. get the project, Python environment, model: same as Ubuntu steps 2 and 3
+
+# 3. Spike: same as Ubuntu step 4
+
+```
+
 ## Run
 
 ```bash
