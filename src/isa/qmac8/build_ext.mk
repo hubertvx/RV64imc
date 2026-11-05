@@ -8,9 +8,14 @@ OUT    ?= build/libqmac8.so
 CXX    ?= g++
 EXTRA  ?=
 
+# Check for MACos
+ifeq ($(shell uname -s),Darwin)
+LDEXT  := -undefined dynamic_lookup
+endif
+
 INCLUDES := -iquote $(BUILD) -I$(SPIKE) -iquote $(SPIKE)/riscv -iquote $(SPIKE)/fesvr -iquote $(SPIKE)/softfloat \
             -iquote $(SPIKE)/disasm -iquote $(SPIKE)/fdt -iquote $(SPIKE)/customext
 
 $(OUT): $(HERE)qmac8.cc
 	@mkdir -p $(dir $@)
-	$(CXX) -std=c++2a -O2 -fPIC -shared -Wall -Wextra -Wno-unused-parameter $(INCLUDES) $(EXTRA) -o $@ $<
+	$(CXX) -std=c++2a -O2 -fPIC -shared -Wall -Wextra -Wno-unused-parameter $(INCLUDES) $(LDEXT) $(EXTRA) -o $@ $<
