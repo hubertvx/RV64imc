@@ -70,8 +70,8 @@ cd ../../../.. # back to main repo if currently at src/isa/riscv-isa-sim/build
 ```
 
 
-Step 4 must use that exact Spike commit: different versions might have a different layout and the build fails
-If already have the CV-Wally toolchain, put its tools on `PATH` (or set `RISCV=/opt/riscv`); the Makefile also
+Step 4 must use that exact Spike commit: different versions might have a different layout and the build fails.
+If already have the CV-Wally toolchain ([cvw toolchain installation](https://github.com/openhwfoundation/cvw#toolchain-installation-and-configuration)), put its tools on `PATH` (or set `RISCV=/opt/riscv`); the Makefile also
 searches there.
 
 ## Run
