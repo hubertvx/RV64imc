@@ -121,14 +121,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--npz", default=os.path.join(here, "..", "models", "deit_tiny_int8.npz"))
     ap.add_argument("--model", default=os.path.join(here, "..", "models", "model.tflite"))
-    ap.add_argument("--calib", default=os.path.join(here, "..", "data", "calib"))
+    ap.add_argument("--eval", default=os.path.join(here, "..", "data", "coco", "eval"),
+                    help="folder of images; the first one is the test image (never used for calibration)")
     ap.add_argument("--out", default=os.path.join(here, "..", "build", "gen"))
     ap.add_argument("--vector-layers", nargs="+", help="layers to export test vectors for (default: all)")
     args = ap.parse_args()
 
     npz = np.load(args.npz)
     model = Model(args.model)
-    image = sorted(glob.glob(os.path.join(args.calib, "*.jpg")))[-1]   # one of the images kept aside for checking
+    image = sorted(glob.glob(os.path.join(args.eval, "*.jpg")))[0]     # an image that was not used for calibration
 
     names = args.vector_layers or list(SAMPLE_LAYERS) + [l["name"] for l in model.layers if l["name"] not in SAMPLE_LAYERS]
     n_sample = len(SAMPLE_LAYERS) if names[:len(SAMPLE_LAYERS)] == list(SAMPLE_LAYERS) else len(names)
