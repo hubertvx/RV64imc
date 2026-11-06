@@ -77,3 +77,4 @@ __pycache__/
 *.elf
 !/Makefile
 models/
+data/coco/
