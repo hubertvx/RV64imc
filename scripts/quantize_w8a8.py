@@ -7,7 +7,7 @@ For each CONV_2D / FULLY_CONNECTED layer (50 in total):
   input  => int8, one scale per layer, from the largest val seen on the calibration images
   bias  => int32, scaled by input_scale * weight_scale
   requantization: the int32 sum is scaled back to int8 with an integer multiplier and shift no floating point
-The check runs each quantized layer on images NOT used for calibration, feeding it the FP32
+The check runs each quantized layer on images NOT used for calibration (data/coco/eval), feeding it the FP32
 model's real layer input, and reports how close the dequantized int8 output is to the FP32 output.
 """
 
@@ -25,7 +25,7 @@ MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)   # average of the red,
 STD = np.array([0.229, 0.224, 0.225], dtype=np.float32) # spread of each channel
 WEIGHT_OPS = ("CONV_2D", "FULLY_CONNECTED")
 PERCENTILE = 99.99   # activation range = this percentile of x (ignores single outliers)
-N_EVAL = 16          # last images in the folder are kept aside for the error check
+N_CHECK = 32         # the first N_CHECK images of the evaluation set are used for the per-layer error check
 
 
 def preprocess(path):
@@ -113,14 +113,17 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=os.path.join(here, "..", "models", "model.tflite"))
-    ap.add_argument("--calib", default=os.path.join(here, "..", "data", "calib"))
+    ap.add_argument("--calib", default=os.path.join(here, "..", "data", "coco", "calib"),
+                    help="images that set the activation scales (see scripts/get_calib_images.py)")
+    ap.add_argument("--eval", default=os.path.join(here, "..", "data", "coco", "eval"),
+                    help="other images, only used for the error check")
     ap.add_argument("--out", default=os.path.join(here, "..", "models", "deit_tiny_int8.npz"))
     args = ap.parse_args()
 
-    images = sorted(glob.glob(os.path.join(args.calib, "*.jpg")))
-    if len(images) <= N_EVAL:
-        raise SystemExit(f"need more than {N_EVAL} images in {args.calib}; run scripts/get_calib_images.py")
-    calib, evalset = images[:-N_EVAL], images[-N_EVAL:]
+    calib = sorted(glob.glob(os.path.join(args.calib, "*.jpg")))
+    evalset = sorted(glob.glob(os.path.join(args.eval, "*.jpg")))[:N_CHECK]
+    if not calib or len(evalset) < N_CHECK:
+        raise SystemExit(f"need images in {args.calib} and {args.eval}; run scripts/get_calib_images.py")
     model = Model(args.model)
     L = model.layers
     print(f"{len(L)} weight layers; calibrating on {len(calib)} images, checking on {len(evalset)} others")
