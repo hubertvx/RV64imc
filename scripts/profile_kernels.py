@@ -2,9 +2,10 @@
 """
 Profile one kernel configuration on Spike and write results
 
-  python scripts/profile_kernels.py --config b0|x1
-  b0 runs on stock Spike. Every other configuration uses the qmac8 instruction and runs on Spike build
+  python scripts/profile_kernels.py --config b0|b1|x1|x2
+  b0 (plain C) and b1 (optimized C) run on stock Spike. x1 uses the qmac8 instruction and runs on Spike built
   with the extension library loaded (install/bin/spike --extlib=build/libqmac8.so --extension=qmac8).
+  x2 = x1 + the qreq instruction (requantization) and loads build/libqreq.so with --extension=qreq.
 
   Counts: the benchmark runs ALL 50 weight layers of deit-tiny (about 86% of the model's MACs). Retired instructions come from the counter the program reads itself (exact), per layer and per operator.
   Mix: tracing every instruction (spike -l) is about 500x slower than a plain run, so the load / store, multiply, branch, custom, ALU mix is traced on a 2-layer sample. Every layer runs the same kernel loop, so the mix per MAC is the same for all layers. The sample's counters are checked to equal the full run's counters for those layers
@@ -128,14 +129,15 @@ def main():
     args = ap.parse_args()
     cfg = args.config
 
-    if cfg != "b0":
-        run(["make", "-s", "build/libqmac8.so"], check=True)    # the X configurations need the extension library
+    lib = "build/libqreq.so" if cfg == "x2" else "build/libqmac8.so"
+    if cfg not in ("b0", "b1"):
+        run(["make", "-s", lib], check=True)                    # the X configurations need the extension library
     if args.spike:
         spike = args.spike.split()
-    elif cfg == "b0":
-        spike = [stock_spike()]                                # baseline: Spike without the extension
-    else:                                                        # custom instruction: Spike + qmac8 extension
-        spike = ["install/bin/spike", "--extlib=build/libqmac8.so", "--extension=qmac8"]
+    elif cfg in ("b0", "b1"):
+        spike = [stock_spike()]                                # plain RV64IMC: Spike without the extension
+    else:                                                        # custom instruction: Spike + extension library
+        spike = ["install/bin/spike", f"--extlib={lib}", "--extension=" + ("qreq" if cfg == "x2" else "qmac8")]
 
     elf = f"build/bench_layer_{cfg}.elf"
     run(["make", "-s", f"CONFIG={cfg}", elf], check=True)
