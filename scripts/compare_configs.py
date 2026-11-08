@@ -259,7 +259,7 @@ def main():
         ]
         out.append(
             f"* {c}: GEMM kernel {gemm_reduction:.2f}x fewer instructions; every operator {min(per_operator):.2f}x "
-            f"to {max(per_operator):.2f}x fewer (GEMM + requantization)"
+            f"to {max(per_operator):.2f}x fewer"
         )
     out.append("")
     if not traced:
