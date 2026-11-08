@@ -104,21 +104,6 @@ brew install riscv-tools
 
 ```
 
-## Calibration and evaluation images
-
-Quantizing to int8 needs real images to find the range of every layer's input (the "scale"). The project uses a fixed
-subset of **COCO val2017**, listed in `data/coco_manifest.csv` with the sha256 hash of every file. The images are
-downloaded by `scripts/get_calib_images.py` and are **not stored in the repository** (`data/coco/` is git-ignored).
-
-| set | images | used for |
-|:--|--:|:--|
-| `data/coco/calib` | 256 | the only images that set the activation scales (`quantize_w8a8.py`) |
-| `data/coco/eval` | 1,000 | never used for calibration: the per-layer error check (first 32), the test image of the benchmark, and the accuracy measurement of the whole model later |
-
-* Chosen with a fixed seed (2026) from the 1,279 val2017 images under CC BY, CC BY-SA or "no known copyright
-  restrictions" licences. The licence and the Flickr address of every image are in the manifest.
-* The instruction counts do not depend on the images, only on the layer shapes.
-
 ## Run
 
 ```bash
@@ -164,6 +149,21 @@ Some flags used and its meaning
 | `-l` | print every executed instruction (address, encoding, name) |
 
 
+
+## Calibration and evaluation images
+
+Quantizing to int8 needs real images to find the range of every layer's input (the "scale"). The project uses a fixed
+subset of **COCO val2017**, listed in `data/coco_manifest.csv` with the sha256 hash of every file. The images are
+downloaded by `scripts/get_calib_images.py` and are **not stored in the repository** (`data/coco/` is git-ignored).
+
+| set | images | used for |
+|:--|--:|:--|
+| `data/coco/calib` | 256 | the only images that set the activation scales (`quantize_w8a8.py`) |
+| `data/coco/eval` | 1,000 | never used for calibration: the per-layer error check (first 32), the test image of the benchmark, and the accuracy measurement of the whole model later |
+
+* Chosen with a fixed seed (2026) from the 1,279 val2017 images under CC BY, CC BY-SA or "no known copyright
+  restrictions" licences. The licence and the Flickr address of every image are in the manifest.
+* The instruction counts do not depend on the images, only on the layer shapes.
 
 
 
